@@ -8,8 +8,9 @@ It reflects real-world needs such as documentation requirements, service logging
 
 ## ⚙️ Tech Stack
 
-- **MySQL 8.0** with InnoDB
-- (Planned) Full-stack implementation using Java (Spring Boot) and JavaScript frontend
+- **MySQL 8.0** with InnoDBI'm 
+- currently exploring Python as a potential language for the upper layers of this application. While I'm still learning the language, this project serves as a hands-on opportunity to grow my skills in backend development and fullstack 
+  architecture.
 
 ## 🎯 Main Features
 
