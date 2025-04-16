@@ -2,16 +2,6 @@ DROP DATABASE IF EXISTS refugeedb;
 CREATE DATABASE refugeedb;
 Use refugeedb;
 
--- Contatct table
--- This table stores the contact information of refugees
--- It includes the phone number, email, and address of the refugee
-create Table IF NOT EXISTS contact(
-    cont_id INT NOT NULL AUTO_INCREMENT,
-    cont_phone VARCHAR(15) NOT NULL,
-    cont_email VARCHAR(100) NULL,
-    cont_address VARCHAR(255) NOT NULL,
-    PRIMARY KEY (cont_id) 
-);
 
 -- Document table
 -- This table stores the document information of refugees
@@ -23,15 +13,16 @@ create TABLE IF NOT EXISTS document (
     doc_issue_date DATE NOT NULL,
     doc_expiry_date DATE NOT NULL,
     PRIMARY KEY (doc_id),
-    UNIQUE (doc_type,doc_number) 
+    UNIQUE (doc_number) 
     
 );
 
 
 create Table IF NOT EXISTS region(
     region_id INT NOT NULL AUTO_INCREMENT,
-    region_continent ENUM('Africa', 'Asia', 'Europe', 'North America', 'Oceania', 'South America') NOT NULL,
-    PRIMARY KEY (region_id)
+    region_name varchar(100) NOT NULL DEFAULT '',
+    PRIMARY KEY (region_id),
+    UNIQUE (region_name)
 );
 
 
@@ -43,16 +34,18 @@ create TABLE IF NOT EXISTS country (
     region_id INT NOT NULL,
     PRIMARY KEY (count_id),
     FOREIGN KEY (region_id) REFERENCES region(region_id),
-    UNIQUE (count_name,region_id,count_id)
+    UNIQUE (count_name)
     -- The country name and region are unique
 );
 
 -- Languages table
 -- This table stores a general list of languages names and its id
+
 create TABLE IF NOT EXISTS languages (
     lang_id INT NOT NULL AUTO_INCREMENT,
     lang_name VARCHAR(50) NOT NULL,
-    PRIMARY KEY (lang_id) 
+    PRIMARY KEY (lang_id),
+    UNIQUE (lang_name)
 );
 
 
@@ -61,46 +54,45 @@ create TABLE IF NOT EXISTS languages (
 -- This table stores the refugee information and is the one of the most important entity table
 -- The language id is used to identify the language of the refugee
 -- The contact id is used to identify the contact information of the refugee
--- The document id is used to identify the document information of the refugee
+-- The family_role is used to identify whether the refugee is an individual or a family member and which role if so
+-- The document id is used to identify the documents associated with the refugee
 -- The country id is used to identify the country of the refugee
+
 create TABLE IF NOT EXISTS refugee (
     ref_id INT NOT NULL AUTO_INCREMENT,
     ref_name VARCHAR(50) NOT NULL,
     ref_lastname VARCHAR(100) NOT NULL,
     ref_gender VARCHAR(10) NOT NULL,
     ref_anumber VARCHAR(20) NOT NULL,
-    ref_enrrollment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    ref_disenrollment_date DATETIME DEFAULT NULL,
+    ref_dob DATE NOT NULL,
+    ref_phone VARCHAR(15)  NOT NULL DEFAULT 'N/A',
+    ref_email VARCHAR(100) NOT NULL DEFAULT 'N/A',
+    ref_family_role ENUM('Casehead','Spouse','Legal Guardian', 'Child', 'Self') NOT NULL,
+    ref_reg_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     lang_id INT NOT NULL,                        
     count_id INT NOT NULL,                       
 	doc_id  INT NOT NULL,
-    cont_id INT NOT NULL,
     PRIMARY KEY (ref_id),
-    FOREIGN KEY (cont_id) REFERENCES contact(cont_id),
     FOREIGN KEY (doc_id) REFERENCES document(doc_id),
     FOREIGN KEY (count_id) REFERENCES country(count_id),
     FOREIGN KEY (lang_id) REFERENCES languages(lang_id),
-    UNIQUE (ref_name,ref_lastname, ref_anumber,doc_id) 
-    -- The refugee name, lastname ,alien number correspondadant types of document is an unique cobination
+    UNIQUE (ref_name,ref_lastname, ref_anumber,ref_family_role) 
+    -- The refugee name, lastname ,alien number is an unique cobination
 ); 
 
-
-
-
-
--- Family table
--- This table stores the family information of the refugee
--- It includes the family role, join date, and the refugee members's id
-CREATE TABLE IF NOT EXISTS family (
-    family_id INT NOT NULL AUTO_INCREMENT,
+create TABLE IF NOT EXISTS raddress (
+    raddress_id INT NOT NULL AUTO_INCREMENT,
+    raddress_fromdate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    raddress_street VARCHAR(255) NOT NULL,
+    raddress_city VARCHAR(50) NOT NULL,
+    raddress_state VARCHAR(50) NOT NULL,
+    raddress_zipcode VARCHAR(10) NOT NULL,
     ref_id INT NOT NULL,
-    family_role ENUM('Father', 'Mother','Legal Guardian', 'Child', 'Spouse', 'Grandparent') NOT NULL,
-    join_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (family_id),
-    FOREIGN KEY (ref_id) REFERENCES refugee (ref_id) ON DELETE CASCADE,
-    UNIQUE (ref_id , family_role)
-    -- The family role is unique for each refugee considering bussiness rules (only direct family roles as described on family_role ENUM)
-);
+    PRIMARY KEY (raddress_id),
+    FOREIGN KEY (ref_id) REFERENCES refugee(ref_id)
+    );
+
+
 
 
 
@@ -112,6 +104,7 @@ create TABLE IF NOT EXISTS program (
     program_name VARCHAR(50) NOT NULL,
     program_funding VARCHAR(100) NOT NULL,
     PRIMARY KEY (program_id)
+    
 );
 
 
@@ -132,7 +125,7 @@ create TABLE IF NOT EXISTS caseworker (
     program_id INT NOT NULL,
     PRIMARY KEY (cw_id),
     FOREIGN KEY (program_id) REFERENCES program(program_id),
-    UNIQUE (cw_name,cw_lastname,program_id)
+    UNIQUE (cw_name,cw_lastname)
 );
 
 --  Services Log 
@@ -185,7 +178,7 @@ create TABLE IF NOT EXISTS serv_status(
 );
 
 -- service priority table
--- The service priority is used to track the priority of the service provided to the refugee
+-- The service priority is used to track the priority of the service need be provided to the refugee
 
 create TABLE IF NOT EXISTS serv_priority(
     serv_priority_id INT NOT NULL AUTO_INCREMENT,
@@ -203,22 +196,20 @@ create TABLE IF NOT EXISTS serv_priority(
 
 create TABLE IF NOT EXISTS  services(
     services_id INT NOT NULL AUTO_INCREMENT,
-    ref_id INT NOT NULL,
-    cw_id INT NOT NULL,
-    program_id INT NOT NULL,
+    Serv_origin ENUM ('Caseworker','Agency','Third') NOT NULL DEFAULT 'Caseworker',
+    serv_provider varchar(100) NOT NULL,
+    serv_description VARCHAR(255) NOT NULL,
     service_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     serv_modality_id INT NOT NULL,
     serv_status_id INT NOT NULL,
     serv_priority_id INT NOT NULL,
     serv_category_id INT NOT NULL,
     PRIMARY KEY (services_id),
-    FOREIGN KEY (ref_id) REFERENCES refugee(ref_id),
-    FOREIGN KEY (cw_id) REFERENCES caseworker(cw_id),
-    FOREIGN KEY (program_id) REFERENCES program(program_id),
     FOREIGN KEY (serv_category_id) REFERENCES serv_category(serv_category_id),
     FOREIGN KEY (serv_modality_id) REFERENCES serv_modality(serv_modality_id),
     FOREIGN KEY (serv_status_id) REFERENCES serv_status(serv_status_id),
     FOREIGN KEY (serv_priority_id) REFERENCES serv_priority(serv_priority_id)
+    
         
 );
 
@@ -226,21 +217,35 @@ create TABLE IF NOT EXISTS  services(
 
 -- Case_ref table
 -- This table stores the case information of the refugee
--- It includes the case type (as described on case_type ENUM), caseworker id, and the refugee id   
+-- It includes the amoutn of refugees in the case, the case status, the case enrollment date, the refugee id/s, and the program id 
 
 create TABLE IF NOT EXISTS case_ref (
     case_id INT NOT NULL AUTO_INCREMENT,
-    case_type ENUM('Self','Family') NOT NULL DEFAULT 'Self',
     ref_id INT NOT NULL,
-    cw_id INT NOT NULL,
-    case_status ENUM ('Active','Inactive') NOT NULL DEFAULT 'Active',
-    case_date_assign DATETIME DEFAULT CURRENT_TIMESTAMP,
+    case_status ENUM ('Pending','Active','Inactive') NOT NULL DEFAULT 'Pending',
+    case_enrrollment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    case_closure_date DATETIME DEFAULT NULL,
+    program_id INT NOT NULL,
+    services_id INT NOT NULL,
     PRIMARY KEY (case_id), 
     FOREIGN KEY (ref_id) REFERENCES refugee(ref_id),
-    FOREIGN KEY (cw_id) REFERENCES caseworker(cw_id)
+    FOREIGN KEY (program_id) REFERENCES program(program_id),
+    FOREIGN KEY (services_id) REFERENCES services(services_id)   
     
 );
 
 
+-- asignment table   
+-- This table stores the caseworker assignment to the refugee
+-- It includes the case id, the caseworker id, and the assignment date
 
+create TABLE IF NOT EXISTS assignment(
+    asig_id INT NOT NULL AUTO_INCREMENT,
+    asig_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    case_id INT NOT NULL,
+    cw_id INT NOT NULL,
+    PRIMARY KEY (asig_id),
+    FOREIGN KEY (case_id) REFERENCES case_ref(case_id) ON DELETE CASCADE,
+    FOREIGN KEY (cw_id) REFERENCES caseworker(cw_id)
+);
 
